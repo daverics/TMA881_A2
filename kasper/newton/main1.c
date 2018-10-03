@@ -50,65 +50,68 @@ struct cplx cplx_conj(struct cplx a) {
 }
 
 
-struct cplx newton_iteration(struct cplx cord,long int numb_degree){
-  struct cplx a = cord;// = (struct cplx *) malloc(sizeof(struct cplx));
-  struct cplx c;// = (struct cplx *) malloc(sizeof(struct cplx));
-  struct cplx d;// = (struct cplx *) malloc(sizeof(struct cplx));
-  struct cplx e;// = (struct cplx *) malloc(sizeof(struct cplx));
-  //const struct cplx *ptr =  cord;
+struct cplx *newton_iteration(struct cplx *cord,long int numb_degree){
+  struct cplx *a = (struct cplx *) malloc(sizeof(struct cplx));
+  struct cplx *c = (struct cplx *) malloc(sizeof(struct cplx));
+  struct cplx *d = (struct cplx *) malloc(sizeof(struct cplx));
+  struct cplx* e = (struct cplx *) malloc(sizeof(struct cplx));
+  const struct cplx *ptr = cord;
 
 
-  //memcpy(a,ptr,sizeof(struct cplx));
-  //memcpy(c,ptr,sizeof(struct cplx));
-  //memcpy(d,ptr,sizeof(struct cplx));
+  memcpy(a,ptr,sizeof(struct cplx));
+  memcpy(c,ptr,sizeof(struct cplx));
+  memcpy(d,ptr,sizeof(struct cplx));
 
 
-  c = cplx_pow(a,numb_degree);
-  c.real = c.real - 1.0;
+  *c = cplx_pow(*a,numb_degree);
+  c->real = c->real - 1.0;
 
-  d = cplx_pow(a,numb_degree-1);
-  double norm1 = numb_degree*norm(d);
-  d = cplx_conj(d);
+  *d = cplx_pow(*a,numb_degree-1);
+  double norm1 = numb_degree*norm(*d);
+  *d = cplx_conj(*d);
 
-  e = cplx_mul(c,d);
-  e.real = (cord.real) - (e.real/norm1);
-  e.imag = (cord.imag) - (e.imag/norm1);
+  *e = cplx_mul(*c,*d);
+//  printf("%f,%f\n",e->real,e->imag);
+//  printf("%f,%f\n",cord->real,cord->imag);
+  e->real = (cord->real) - (e->real/norm1);
+  e->imag = (cord->imag) - (e->imag/norm1);
 
+  printf("%f,%f\n",e->real,e->imag);
   return e;
 
 }
 
-void newton(struct cplx cord, struct cplx * roots,long int numb_degree){
+struct cplx * newton(struct cplx *cord, struct cplx * roots,long int numb_degree){
   int jx = 0;
   while(jx<100){
     jx++;
-    if (sqrt(norm(cord)) < TOL){
-      cord.root = 0;
-      cord.iteration = jx;
+    if (sqrt(norm(*cord)) < TOL){
+      cord->root = 0;
+      cord->iteration = jx;
       printf("Zero\n");
-      return;
+      return cord;
     }
-    if (abs((int) cord.real)>10000000000 ||
-        abs((int) cord.imag)>10000000000 ||
-        sqrt(norm(cord))    >10000000000 ){
-      cord.root = 100;
-      cord.iteration = jx;
+    if (abs((int) cord->real)>10000000000 ||
+        abs((int) cord->imag)>10000000000 ||
+        sqrt(norm(*cord))    >10000000000 ){
+      cord->root = 100;
+      cord->iteration = jx;
       printf("Inf\n");
-      return;
+      return cord;
     }
     for (size_t ix = 0; ix < numb_degree; ix++) {
-      if (dist(cord,roots[ix]) < TOL){
-        cord.root = ix+1;
-        cord.iteration = jx;
+      if (dist(*cord,roots[ix]) < TOL){
+        cord->root = ix+1;
+        cord->iteration = jx;
         printf("Yay\n");
-        return;
+        return cord;
       }
 
     }
     cord = newton_iteration(cord,numb_degree);
   }
   printf("Doesn't converge\n");
-  return;
+  exit(-1);
 }
 
 
@@ -159,15 +162,12 @@ int main(int argc,char * argv[]){
   }
 
 
-  // struct cplx cord;// = (struct cplx) malloc(sizeof(struct cplx));
-  // cord.real = 2.0;
-  // cord.imag = 2.0;
-  for (size_t ix = 0; ix < numb_pixel; ix++) {
-    for (size_t jx = 0; jx < numb_pixel; jx++) {
-      newton(pixel[ix][jx],roots,numb_degree);
-    }
-  }
+  struct cplx * cord = (struct cplx *) malloc(sizeof(struct cplx));
+  cord->real = 2.0;
+  cord->imag = 2.0;
+  cord = newton(pixel[0]+999,roots,numb_degree);
 
+  printf("real:%f imag:%f\n",cord->real,cord->imag);
   return 0;
 
 
