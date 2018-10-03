@@ -4,6 +4,7 @@
 #include <time.h>
 #include <stdbool.h>
 #include <math.h>
+#include <pthread.h>
 #define TOL 0.001
 
 typedef struct cplx{
@@ -13,48 +14,60 @@ typedef struct cplx{
   int iteration;
 }cplx;
 
-struct cplx cplx_mul(struct cplx b, struct cplx c) {
-      struct cplx a;
+
+static long int numb_degree;
+static long int numb_pixel;
+static long int numb_threads;
+int * block;
+cplx ** pixel;
+cplx * roots;
+
+
+
+
+
+cplx cplx_mul(cplx b, cplx c) {
+      cplx a;
       a.real = -(b.imag * c.imag) + b.real * c.real;
       a.imag = b.real * c.imag + b.imag * c.real;
       return a;
     }
 
-struct cplx cplx_pow(struct cplx a,long int d){
+cplx cplx_pow(cplx a,long int d){
   if (d<1)
     return a;
   d = d-1;
-  struct cplx c = a;
+  cplx c = a;
   for (size_t ix = 0; ix < d; ix++) {
     c = cplx_mul(c,a);
   }
   return c;
 }
 
-double norm(struct cplx a){
+double norm(cplx a){
   double norm = 1.0;
   norm = norm*(a.real*a.real+a.imag*a.imag);
   return norm;
 }
 
-double dist(struct cplx a, struct cplx b){
+double dist(cplx a, cplx b){
   double dist;
   dist = (a.real-b.real)*(a.real-b.real)+(a.imag-b.imag)*(a.imag-b.imag);
   dist = sqrt(dist);
   return dist;
 }
 
-struct cplx cplx_conj(struct cplx a) {
+cplx cplx_conj(cplx a) {
   a.imag = -a.imag;
   return a;
 }
 
 
-struct cplx newton_iteration(struct cplx cord,long int numb_degree){
-  struct cplx a = cord;// = (struct cplx *) malloc(sizeof(struct cplx));
-  struct cplx c;// = (struct cplx *) malloc(sizeof(struct cplx));
-  struct cplx d;// = (struct cplx *) malloc(sizeof(struct cplx));
-  struct cplx e;// = (struct cplx *) malloc(sizeof(struct cplx));
+cplx newton_iteration(cplx cord,long int numb_degree){
+  cplx a = cord;// = (struct cplx *) malloc(sizeof(struct cplx));
+  cplx c;// = (struct cplx *) malloc(sizeof(struct cplx));
+  cplx d;// = (struct cplx *) malloc(sizeof(struct cplx));
+  cplx e;// = (struct cplx *) malloc(sizeof(struct cplx));
   //const struct cplx *ptr =  cord;
 
 
@@ -78,7 +91,7 @@ struct cplx newton_iteration(struct cplx cord,long int numb_degree){
 
 }
 
-void newton(struct cplx cord, struct cplx * roots,long int numb_degree){
+void newton(cplx cord, cplx * roots,long int numb_degree){
   int jx = 0;
   while(jx<100){
     jx++;
@@ -100,9 +113,10 @@ void newton(struct cplx cord, struct cplx * roots,long int numb_degree){
       if (dist(cord,roots[ix]) < TOL){
         cord.root = ix+1;
         cord.iteration = jx;
-        printf("Yay\n");
+        //printf("Yay\n");
         return;
       }
+
 
     }
     cord = newton_iteration(cord,numb_degree);
@@ -111,7 +125,15 @@ void newton(struct cplx cord, struct cplx * roots,long int numb_degree){
   return;
 }
 
-
+void * newton_f(void * arg){
+  int * block_n = (int*) arg;
+  for (size_t ix = (*block_n); ix < (*block_n+1); ix++) {
+    for (size_t jx = 0; jx < numb_pixel; jx++) {
+      newton(pixel[ix][jx], roots, numb_degree);
+    }
+  }
+  pthread_exit(0);
+}
 
 
 
@@ -121,22 +143,20 @@ int main(int argc,char * argv[]){
     return 0;
   }
 
-  long int numb_threads;
   if (argv[1][0] == '-' && argv[1][1] == 't') {
     numb_threads = strtol((argv[1]+2),NULL,10);
   }
 
 
-  long int numb_pixel;
+
   if (argv[2][0] == '-' && argv[2][1] == 'l'){
     numb_pixel = strtol((argv[2]+2),NULL,10);
   }
 
 
-  long int numb_degree;
   numb_degree = strtol(argv[3],NULL,10);
 
-  struct cplx * roots = (struct cplx*) malloc(sizeof(struct cplx) *numb_degree);
+  roots = (cplx*) malloc(sizeof(cplx) *numb_degree);
   for (size_t ix = 0; ix < numb_degree; ix++) {
     roots[ix].real = cos(ix*2*M_PI/(numb_degree));
     roots[ix].imag = sin(ix*2*M_PI/(numb_degree));
@@ -144,7 +164,7 @@ int main(int argc,char * argv[]){
   printf("%f,%f\n",roots[0].real,roots[0].imag);
 
   cplx* mem = (cplx*) malloc(sizeof(cplx)*numb_pixel*numb_pixel);
-  cplx ** pixel = (cplx **) malloc(sizeof(cplx*)*numb_pixel);
+  pixel = (cplx **) malloc(sizeof(cplx*)*numb_pixel);
 
   for (size_t ix = 0, jx=0; ix < numb_pixel; ix++, jx+=numb_pixel) {
     pixel[ix] = mem+jx;
@@ -158,15 +178,53 @@ int main(int argc,char * argv[]){
     }
   }
 
+  block = (int*) malloc(sizeof(int)*(numb_threads+1));
+  for (size_t ix = 0; ix < numb_threads+1; ix++) {
+    block[ix] = ix*numb_pixel/numb_threads;
+  }
 
-  // struct cplx cord;// = (struct cplx) malloc(sizeof(struct cplx));
-  // cord.real = 2.0;
-  // cord.imag = 2.0;
+  pthread_t threads[numb_threads];
+  pthread_attr_t attr;
+  pthread_attr_init(&attr);
+  for (size_t ix = 0; ix < numb_threads; ix++) {
+    pthread_create(&threads[ix], &attr, newton_f, &block[ix]);
+  }
+
+  for (size_t ix = 0; ix < numb_threads; ix++) {
+    pthread_join(threads[ix],NULL);
+  }
+  int h;
   for (size_t ix = 0; ix < numb_pixel; ix++) {
     for (size_t jx = 0; jx < numb_pixel; jx++) {
-      newton(pixel[ix][jx],roots,numb_degree);
+      if (pixel[ix][jx].iteration == 0){
+        h++;
+      }
     }
   }
+
+  printf("woops %d\n",h);
+
+
+  //pthread_mutex_init(&mutex_sum, NULL);
+  //
+  // for (tx=0, ix=0; tx < n_threads; ++tx, ix+=block_size) {
+  //   double ** arg = malloc(2*sizeof(double*));
+  //   arg[0] = a+ix; arg[1] = b+ix;
+  //   if (ret = pthread_create(threads+tx, NULL, newton, (void*)arg)) {
+  //     printf("Error creating thread: %\n", ret);
+  //     exit(1);
+  // }
+  //}
+
+
+
+
+
+  // for (size_t ix = 0; ix < numb_pixel; ix++) {
+  //   for (size_t jx = 0; jx < numb_pixel; jx++) {
+  //     newton(pixel[ix][jx],roots,numb_degree);
+  //   }
+  // }
 
   return 0;
 
