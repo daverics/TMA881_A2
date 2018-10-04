@@ -19,9 +19,17 @@ static long int numb_degree;
 static long int numb_pixel;
 static long int numb_threads;
 int * block;
-cplx ** pixel;
+static cplx ** pixel;
 cplx * roots;
+char ** colours;
 
+
+void * ppm_writer(void * arg){
+  FILE * fp;
+  fp = fopen("newton_attractors_xd.ppm","w");
+  fwrite("P3\n10 10\n10",sizeof(char),numb_pixel,fp);
+  fclose(fp);
+}
 
 
 
@@ -64,19 +72,16 @@ cplx cplx_conj(cplx a) {
 
 
 cplx newton_iteration(cplx cord,long int numb_degree){
-  cplx a = cord;// = (struct cplx *) malloc(sizeof(struct cplx));
-  cplx c;// = (struct cplx *) malloc(sizeof(struct cplx));
-  cplx d;// = (struct cplx *) malloc(sizeof(struct cplx));
-  cplx e;// = (struct cplx *) malloc(sizeof(struct cplx));
-  //const struct cplx *ptr =  cord;
+  cplx a = cord;
+  cplx b = cord;
+  cplx c;
+  cplx d;
+  cplx e;
 
-
-  //memcpy(a,ptr,sizeof(struct cplx));
-  //memcpy(c,ptr,sizeof(struct cplx));
-  //memcpy(d,ptr,sizeof(struct cplx));
 
 
   c = cplx_pow(a,numb_degree);
+  b = c;
   c.real = c.real - 1.0;
 
   d = cplx_pow(a,numb_degree-1);
@@ -91,45 +96,44 @@ cplx newton_iteration(cplx cord,long int numb_degree){
 
 }
 
-void newton(cplx cord, cplx * roots,long int numb_degree){
+cplx newton(cplx cord, cplx * roots,long int numb_degree){
   int jx = 0;
-  while(jx<100){
+  while(jx<1000000){
     jx++;
     if (sqrt(norm(cord)) < TOL){
       cord.root = 0;
       cord.iteration = jx;
-      printf("Zero\n");
-      return;
+      //printf("Zero\n");
+      return cord;
     }
     if (abs((int) cord.real)>10000000000 ||
         abs((int) cord.imag)>10000000000 ||
         sqrt(norm(cord))    >10000000000 ){
-      cord.root = 100;
+      cord.root = 0;
       cord.iteration = jx;
-      printf("Inf\n");
-      return;
+      //printf("Inf\n");
+      return cord;
     }
     for (size_t ix = 0; ix < numb_degree; ix++) {
       if (dist(cord,roots[ix]) < TOL){
         cord.root = ix+1;
         cord.iteration = jx;
         //printf("Yay\n");
-        return;
+        return cord;
       }
-
-
     }
     cord = newton_iteration(cord,numb_degree);
   }
-  printf("Doesn't converge\n");
-  return;
+  //printf("Doesn't converge\n");
+  cord.root = 0;
+  return cord;
 }
 
 void * newton_f(void * arg){
   int * block_n = (int*) arg;
-  for (size_t ix = (*block_n); ix < (*block_n+1); ix++) {
+  for (size_t ix = *block_n; ix < *(block_n+1); ix++) {
     for (size_t jx = 0; jx < numb_pixel; jx++) {
-      newton(pixel[ix][jx], roots, numb_degree);
+      pixel[ix][jx] = newton(pixel[ix][jx], roots, numb_degree);
     }
   }
   pthread_exit(0);
@@ -190,19 +194,47 @@ int main(int argc,char * argv[]){
     pthread_create(&threads[ix], &attr, newton_f, &block[ix]);
   }
 
+
+
   for (size_t ix = 0; ix < numb_threads; ix++) {
     pthread_join(threads[ix],NULL);
   }
+
   int h;
   for (size_t ix = 0; ix < numb_pixel; ix++) {
     for (size_t jx = 0; jx < numb_pixel; jx++) {
       if (pixel[ix][jx].iteration == 0){
+        //printf("%f,%f\n", pixel[ix][jx].real,pixel[ix][jx].imag);
         h++;
       }
     }
   }
 
   printf("woops %d\n",h);
+
+  colours = (char**) malloc(sizeof(char*)*10);
+  for (size_t i = 0; i < 10; i++) {
+    colours[i] = (char *) malloc(sizeof(char)*6);
+  }
+  colours[0] = "5 1 1 ";
+  colours[1] = "1 5 1 ";
+  colours[2] = "1 1 5 ";
+  colours[3] = "1 1 5 ";
+  colours[4] = "1 5 1 ";
+  colours[5] = "1 5 5 ";
+  colours[6] = "5 1 5 ";
+  colours[7] = "5 5 1 ";
+  colours[8] = "5 5 5 ";
+  colours[9] = "9 5 1 ";
+
+
+  pthread_t painter;
+
+  pthread_create(&painter, &attr, ppm_writer, NULL);
+  pthread_join(painter,NULL);
+
+
+
 
 
   //pthread_mutex_init(&mutex_sum, NULL);
