@@ -1,10 +1,10 @@
-char *concatDiffString(int arg c, char * argv[]) {
+char *concatDiffString(int argc, char *argv[]) {
      int length = 0;
      for (int i = 0; i < argc; ++i)
          length += strlen(argv[i]);
 
 
-     char *output = (char*)malloc(length + 1);
+     char *output = (char*) malloc(length + 1);
 
 
      char *dest = output;
