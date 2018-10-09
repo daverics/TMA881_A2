@@ -8,10 +8,10 @@ GCOV = -pg -ftest-coverage -fprofile-arcs
 
 
 all			:	$(OBJ)
-	$(CC) -std=c11 -pthread -lm $(OBJ) -o main $(OPT)
+	$(CC) -std=c11 -pthread -lm $(GCOV) $(OBJ) -o main $(OPT)
 
-main.o		:	main.c newton.c
-newton.o	:	newton.c
+main.o		:	main.c
+#newton.o	:	newton.c
 
 
 clean:

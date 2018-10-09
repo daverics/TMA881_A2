@@ -59,6 +59,8 @@ double complex somePow(double complex a, int d) {
           double complex b = a*a;
           double complex c = b*b;
           out = c*c;
+     } else if (d == 0) {
+          out = 1 + 0.0*I;
      }
      return out;
 }
@@ -100,19 +102,45 @@ void * ppm_writer2(void * arg){
   fwrite(stringent,sizeof(char),strlen(stringent),fp1);
   fwrite(stringentConv,sizeof(char),strlen(stringentConv),fp2);
 
+  size_t numWrite = 50;
+
+  char ** str1 = (char **) malloc(sizeof(char*)*numWrite);
+  char ** str2 = (char **) malloc(sizeof(char*)*numWrite);
+
   bool a = true;
   for (size_t i = 0; i < numb_pixel; i++) {
-    for (size_t j = 0; j < numb_pixel; j++) {
+    for (size_t j = 0; j < numb_pixel; j +=numWrite) {
       a = true;
 
       while (a){
-        if (start_space[i][j].root != 0){
+        if (start_space[i][j+numWrite - 1].root != 0){
           a = false;
         }
       }
+      //printf("aa\n");
 
-      fwrite(colours[start_space[i][j].root],sizeof(char),strlen(colours[start_space[i][j].root]),fp1);
-      fwrite(colourIter[start_space[i][j].num_of_ite],sizeof(char),strlen(colourIter[start_space[i][j].num_of_ite]),fp2);
+
+      //printf("aa\n");
+      for (size_t jx = j; jx < j + numWrite; jx++) {
+        str1[jx] = colours[start_space[i][jx].root];
+        str2[jx] = colourIter[start_space[i][jx].num_of_ite];
+      }
+
+      //printf("aa\n");
+
+      char * out1 = concatDiffString(numWrite,str1);
+      //printf("aa\n");
+
+      char * out2 = concatDiffString(numWrite,str2);
+      //printf("aa\n");
+
+      fwrite(out1,sizeof(char),strlen(out1),fp1);
+      fwrite(out2,sizeof(char),strlen(out2),fp2);
+      //printf("aa\n");
+
+
+      //fwrite(colours[start_space[i][j].root],sizeof(char),strlen(colours[start_space[i][j].root]),fp1);
+      //fwrite(colourIter[start_space[i][j].num_of_ite],sizeof(char),strlen(colourIter[start_space[i][j].num_of_ite]),fp2);
 
 
     }
@@ -137,97 +165,6 @@ void * ppm_writer2(void * arg){
 
 
 // BEGINtest
-void * ppm_writer(void * arg){
-
-     char n_pix[5];
-     sprintf(n_pix, "%d ", numb_pixel);
-
-     char **writeString = malloc(sizeof(char*)*4);
-     writeString[0] = (char*) malloc(sizeof(char)*4);
-     writeString[1] = (char*) malloc(sizeof(char)*strlen(n_pix));
-     writeString[2] = (char*) malloc(sizeof(char)*strlen(n_pix));
-     writeString[3] = (char*) malloc(sizeof(char)*6);
-
-     writeString[0] = "P3\n";
-     writeString[1] = n_pix;
-     writeString[2] = n_pix;
-     writeString[3] = "\n10\n";
-
-
-     char * stringent = concatDiffString(4,writeString);
-
-       char **writeStringConv = malloc(sizeof(char*)*4);
-       writeStringConv[0] = (char*) malloc(sizeof(char)*4);
-       writeStringConv[1] = (char*) malloc(sizeof(char)*strlen(n_pix));
-       writeStringConv[2] = (char*) malloc(sizeof(char)*strlen(n_pix));
-       writeStringConv[3] = (char*) malloc(sizeof(char)*7);
-
-       writeStringConv[0] = "P3\n";
-       writeStringConv[1] = n_pix;
-       writeStringConv[2] = n_pix;
-       writeStringConv[3] = "\n100\n";
-
-
-       char * stringentConv = concatDiffString(4,writeStringConv);
-       //printf("hej\n");
-pthread_mutex_lock(&mutex);
-  FILE * fp;
-  fp = fopen("newton_attractors_x7.ppm","w");
-
-
-  // Rewrite this, since numb_pixel is string from the beginning
-
-  //"P3\n1000 1000\n10\n";
-  fwrite(stringent,sizeof(char),strlen(stringent),fp);
-  /*
-  char* output = concatString(int 0, int numb_pixel*numb_pixel);
-  frwrite(output, sizeof(char),strlen(output),fp);
-*/
-
-  for (size_t i = 0; i < numb_pixel; i++) {
-    for (size_t j = 0; j < numb_pixel; j++) {
-         //printf("%d\n", start_space[i][j].root);
-       fwrite(colours[start_space[i][j].root],sizeof(char),strlen(colours[start_space[i][j].root]),fp);
-    }
-
-  }
-
-  fclose(fp);
-  fp = fopen("newton_convergence_xd.ppm","w");
-
-  //char n_pix[5];
-  //sprintf(n_pix, "%d ", numb_pixel);
-/*
-  char **writeString = malloc(sizeof(char*)*4);
-  writeString[0] = (char*) malloc(sizeof(char)*4);
-  writeString[1] = (char*) malloc(sizeof(char)*strlen(n_pix));
-  writeString[2] = (char*) malloc(sizeof(char)*strlen(n_pix));
-  writeString[3] = (char*) malloc(sizeof(char)*6);
-
-  writeString[0] = "P3\n";
-  writeString[1] = n_pix;
-  writeString[2] = n_pix;
-  writeString[3] = "\n100\n";
-
-
-  char * stringent = concatDiffString(4,writeString);
-  //"P3\n1000 1000\n10\n";*/
-
-
-  fwrite(stringentConv,sizeof(char),strlen(stringentConv),fp);
-
-  for (size_t i = 0; i < numb_pixel; i++) {
-    for (size_t j = 0; j < numb_pixel; j++) {
-         //printf("%d\n", start_space[i][j].root);
-       fwrite(colourIter[start_space[i][j].num_of_ite],sizeof(char),strlen(colourIter[start_space[i][j].num_of_ite]),fp);
-    }
-
-  }
-
-
-  fclose(fp);
-   pthread_mutex_unlock(&mutex);
-}
 
 
 // SLUTtest
@@ -239,29 +176,27 @@ pthread_mutex_lock(&mutex);
 
 
 double complex newtonUpdate(double complex a, int d) {
-     double norm = 1/(d*cabs(somePow(a, d - 1))*cabs(somePow(a, d - 1)));
-     double complex b = a - (somePow(a,d) - 1)*somePow(conj(a), d - 1)*norm;
-     return b;
+    double complex c = somePow(a, d-1);
+    //double complex e = c*c;
+    // cabs(e) = creal(c)*creal(c) + cimag(c)*cimag(c)
+    double norm = 1/(d*(creal(c)*creal(c) + cimag(c)*cimag(c)));
+    double complex b = a - (c*a - 1)*conj(c)*norm;
+    return b;
 }
 
 // Iterates newton until convergence/not
 
 struct cpl_root newton_raphson_method(struct cpl_root start_point, int degree,
      double complex * roots, int num_ite) {
-          //printf("insideNewton\n");
           double complex x_k = start_point.number; // Set initial point
           double abs_fx_k = 1.0;
           size_t j = 0;
           // function value is not close enough to zero, and real/imag part < 10^10
-          /*printf("%f + %fi\n",creal(x_k),cimag(x_k));
-          printf("%f\n", cabs(somePow(x_k, degree) - 1));
-          printf("%f\n", cabs(x_k));*/
           while (abs_fx_k > 0.001 && cabs(x_k) > 0.001 &&
           abs(creal(x_k)) < 10000000000 && abs(cimag(x_k)) < 10000000000 ) {
                x_k = newtonUpdate(x_k, degree);
                abs_fx_k = cabs(somePow(x_k, degree) - 1);
                j++;
-               //printf("%f + %f i\n",creal(x_k), cimag(x_k) );
           }
 
           if (abs_fx_k < 0.001) {
@@ -270,14 +205,8 @@ struct cpl_root newton_raphson_method(struct cpl_root start_point, int degree,
                          start_point.root = k+1;
                          if (j < 12) {
                               start_point.num_of_ite = 1;
-                         } else if (j < 13) {
-                              start_point.num_of_ite = 5;
-                         } else if (j < 14) {
-                              start_point.num_of_ite = 7;
-                         } else if (j < 15) {
-                              start_point.num_of_ite = 8;
-                         } else if (j < 16) {
-                              start_point.num_of_ite = 9;
+                         } /*else if (j < 16) {
+                              start_point.num_of_ite = j-7;
                          } else if (j < 18) {
                               start_point.num_of_ite = 10;
                          } else if (j < 20) {
@@ -294,10 +223,9 @@ struct cpl_root newton_raphson_method(struct cpl_root start_point, int degree,
                               start_point.num_of_ite = 16;
                          } else if (j < 32) {
                               start_point.num_of_ite = 17;
-                         } else {
+                         }*/ else {
                               start_point.num_of_ite = 19;
                          }
-                         //printf("%d\n", start_point.root);
                          return start_point;
                     }
                }
@@ -310,12 +238,9 @@ struct cpl_root newton_raphson_method(struct cpl_root start_point, int degree,
 
 void * newton_f(void * arg){
   int * block_n = (int*) arg;
-  for (size_t ix = (*block_n); ix < *(block_n+1); ix++) {
+  for (size_t ix = *(block_n); ix < numb_pixel; ix+=numb_threads) {
     for (size_t jx = 0; jx < numb_pixel; jx++) {
-         //printf("Started newton for some block\n");
-         // Update this to asentries instead, which is a vector
     start_space[ix][jx]= newton_raphson_method(start_space[ix][jx],numb_degree,roots,50000);
-    // asentries[ix + jx] = newton_raphson_method(asentries[ix + jx], numb_degree, roots,50000);
     }
   }
   pthread_exit(0);
@@ -332,18 +257,9 @@ for ( int ix = 0; ix < numb_pixel; ++ix ){
   for ( int jx = 0; jx < numb_pixel; ++jx ){
        start_space[ix][jx].number = -2 + (double) (4*jx)/(numb_pixel-1) + ( - ((double) (4*ix)/(numb_pixel-1)) + 2)*I;
        start_space[ix][jx].root = 0;
-      /* asentries[ix + jx]
-    double test4 =(double) (4*jx)/(numb_pixel-1);
-    double test5 =(double) (4*ix)/(numb_pixel-1);
-    __real__ (start_space[ix][jx].number) =(double)-2+test4;
-    __imag__ (start_space[ix][jx].number) =(double)-2+test5;
-    */
   }
 }
-//printf("%f %f \n", start_space[0][0].number);
-// This should return asentries instead, change output to struct cpl_root *
-//return asentries;
-//printf("Generated startspace\n");
+
 return start_space;
 }
 
@@ -353,93 +269,10 @@ double complex * generateRoots(int degree){
   double complex * roots = (double complex*) malloc(sizeof(double complex)*degree);
   for (int ix = 0; ix < degree; ix++) {
        roots[ix] = cos(ix*2*PI/(degree)) +  sin(ix*2*PI/(degree))*I;
-    //__real__ roots[ix] = cos(ix*2*PI/(degree));
-    //__imag__ roots[ix] = sin(ix*2*PI/(degree));
   }
-  //printf("Generated roots\n");
+
   return roots;
 }
-
-
-
-/*
-
-double complex pow_cpx(double complex a, int d){
-  double complex a_tmp=a;
-  for (size_t i = 1; i < d; i++) {
-    a=a*a_tmp;
-  }
-  return a;
-}
-
-/*
-
-// This function computes one iteration of the newton method
-
-/*
-double complex newton_raphson_iteration(double complex startpoint,int d){
-  double complex numerator1, numerator2,denominator,help,final_numerator, nextpoint;
-  numerator1 = pow_cpx(startpoint,d);
-  complex double unity = 1 + 0*I;
-  numerator1=numerator1-unity;
-  help = pow_cpx(startpoint,d-1);
-  numerator2=conj(help);
-  denominator=numerator2*help;
-  final_numerator = numerator1*numerator2;
-  __real__ final_numerator = creal(final_numerator)/(creal(denominator)*d);
-  __imag__ final_numerator = cimag(final_numerator)/(creal(denominator)*d);
-  nextpoint = startpoint - final_numerator;
-  return nextpoint;
-}
-*/
-
-
-
-/*
-  double complex start = start_point.number;
-  double complex unity = 1+0*I;
-  double complex test;
-  // for loop for each iteration, checks convergence etc
-  for (size_t i = 0; i < num_ite; i++) {
-    start = newton_raphson_iteration(start,degree); // Calculate x_(k+1)
-    test = pow_cpx(start,degree)-unity;
-    // Not sure what happens here
-      test = test*conj(test);
-      double test2 =(double) creal(test);
-      double test3 =(double) cimag(test);
-      test2 = abs(test2);
-      test3 = abs(test3);
-      double test4 = cabs(test4);
-
-      // Checking if real or imaginary part is large enough to abort
-    if ((test2 > 10000000000) || (test3 >10000000000)){
-      printf("FAIL");
-      start_point.root = 9;
-      start_point.num_of_ite=i;
-      break;
-    } else if (test4<0.001) {
-
-         // If the function value is close enough to zero, check which root is closest
-      for (size_t k = 0; k < degree; k++) {
-        if (cabs(start-roots[k]) < 0.001){
-          start_point.root = k+1; // Set which root it is
-          start_point.num_of_ite=i; // Set the number of iterations
-          start_point.number = start; // Has no use? Is the current point
-          return start_point;
-        }
-      }
-    }
-    }
-    start_point.num_of_ite=1000000; // If the method doesn't converge in num_of_ite
-    start_point.root = 9; // The 'extra' roots
-    return start_point;
-}
-
-*/
-
-
-
-
 
 
 
@@ -523,103 +356,36 @@ colourIter[19] = "84 84 84  ";
 
   start_space = generateStartspace();
   roots = generateRoots(numb_degree);
-  //printf("hej1\n");
-// Removed +1. No problem.
   block = (int*) malloc(sizeof(int*)*(numb_threads));
-  for (size_t ix = 0; ix < numb_threads + 1; ix++) {
-    block[ix] = ix*numb_pixel/numb_threads;
+  for (size_t ix = 0; ix < numb_threads; ix++) {
+    block[ix] = ix;//*numb_pixel/numb_threads;
   }
-//printf("hej2\n");
+
   pthread_t threads[numb_threads];
   pthread_t painter;
   pthread_attr_t attr;
   pthread_attr_init(&attr);
   for (size_t ix = 0; ix < numb_threads; ix++) {
     pthread_create(&threads[ix], &attr, newton_f, &block[ix]);
-    //printf("Created thread %d\n",ix + 1 );
+
   }
   pthread_create(&painter, &attr, ppm_writer2, NULL);
 
-
-  // Here threads will do stuff //
-
-  // CODE FROM HERE IS NOT TESTED YET
-/*
-  // Threads do computations
-  for ( size_t ix = offset; ix < nmb_work_items; ix += nmb_threads ) {
-    int * result = (int*)malloc(sizeof(int)*item_size);
-    // compute work item = Do the newton for an item. Then we store it in results
-    // In our case, results is startspace
-    results[ix] = result;
-
-    pthread_mutex_lock(&item_done_mutex);
-    item_done[li] = 1;
-    pthread_mutex_unlock(&item_done_mutex);
-  }
-
-  // Make the local copy for the write threads
-
-  void *
-write_main(
-    void * args
-    )
-{
-  char * item_done_loc = (char*)calloc(nmb_items, sizeof(char));
-
-
-  // Make a local copy of the result and use it to write
-
-  for ( size_t ix = 0; ix < nmb_items; ) {
-  pthread_mutex_lock(&item_done_mutex);
-  if ( item_done[ix] != 0 )
-    memcpy(item_done_loc, item_done, nmb_items*sizeof(char));
-  pthread_mutex_unlock(&item_done_mutex);
-
-  if ( item_done_loc[ix] == 0 ) {
-    nanosleep(&sleep_timespec, NULL);
-    continue;
-  }
-
-  for ( ; ix < nmb_items && item_done_loc[ix] != 0; ++ix ) {
-    result = results[ix];
-
-    // Here we should first write the roots it converged to, for all newly finished points
-    // Then we should repeat it but with the number of iterations
-
-    // write result
-
-    free(result);
-  }
-}
-/// END OF NON-TESTED CODE
-*/
 
 
 
   // Here we join the threads
 
- // printf("hej3\n");
+
   for (size_t ix = 0; ix < numb_threads; ix++) {
     pthread_join(threads[ix],NULL);
   }
 
-
-
-
-
-
-
-
-
-  //printf("hej4\n");
   pthread_join(painter,NULL);
-//printf("hej5\n");
-
 
   timespec_get(&tend, TIME_UTC);
   double recTime = tend.tv_sec - tstart.tv_sec + NANO*(tend.tv_nsec - tstart.tv_nsec);
-
-    printf("Time: %f \n", recTime);
+  printf("Time: %f \n", recTime);
 
 
 
